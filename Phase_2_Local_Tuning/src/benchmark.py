@@ -31,6 +31,22 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 logger = logging.getLogger("Phase2Benchmark")
 
 
+# Fixed Dataset Parameters (Official CNS ISE 2026 Group Seed)
+DATASET_SEED = b"CNS_ISE_GROUP_PROJECT_2026_SEED_42"
+
+def generate_stream_bytes(seed: bytes, num_bytes: int) -> bytes:
+    import hashlib
+    counter = 0
+    produced = 0
+    chunks = []
+    while produced < num_bytes:
+        block = hashlib.sha256(seed + counter.to_bytes(8, 'big')).digest()
+        take = min(32, num_bytes - produced)
+        chunks.append(block[:take])
+        produced += take
+        counter += 1
+    return b"".join(chunks)
+
 def run_pilot_benchmark(
     pilot_workloads: List[Tuple[str, int, str]],
     key_lengths: List[int],
@@ -63,13 +79,17 @@ def run_pilot_benchmark(
         writer.writeheader()
 
         for filename, size_bytes, label in pilot_workloads:
-            # Load payload from Phase 1 test_data if available
+            # 1. Try dataset/ directory
+            d_path = os.path.join("dataset", f"block_{label}.bin")
             p_path = os.path.join("Phase_1_Data_Lock", "test_data", filename)
-            if os.path.exists(p_path):
+            if os.path.exists(d_path) and os.path.getsize(d_path) == size_bytes:
+                with open(d_path, "rb") as pf:
+                    data = pf.read()
+            elif os.path.exists(p_path) and os.path.getsize(p_path) == size_bytes:
                 with open(p_path, "rb") as pf:
                     data = pf.read()
             else:
-                data = b"0" * size_bytes
+                data = generate_stream_bytes(DATASET_SEED, size_bytes)
 
             size_mib = size_bytes / (1024.0 * 1024.0)
 

@@ -8,7 +8,9 @@ env/
 venv/
 .pytest_cache/
 
-# Large temporary files
+# Large binary payloads exceeding GitHub 100MB limit (regenerable via generate_dataset.py)
+*100MiB.bin
+*104857600.bin
 *.tmp
 
 # Operating system files

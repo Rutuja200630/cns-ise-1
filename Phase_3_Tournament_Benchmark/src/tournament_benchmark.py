@@ -49,11 +49,32 @@ WORKLOAD_DEFINITIONS = [
     ("50 MiB", 52428800)
 ]
 
+# Fixed Dataset Parameters (Official CNS ISE 2026 Group Seed)
+DATASET_SEED = b"CNS_ISE_GROUP_PROJECT_2026_SEED_42"
+BYTES_PER_MIB = 1024 * 1024
+HASH_BLOCK_SIZE = 32
+
+SIZE_TO_DATASET_FILE = {
+    1 * BYTES_PER_MIB: "block_1MiB.bin",
+    10 * BYTES_PER_MIB: "block_10MiB.bin",
+    50 * BYTES_PER_MIB: "block_50MiB.bin",
+    100 * BYTES_PER_MIB: "block_100MiB.bin"
+}
+
+def sha256_counter_stream(seed: bytes = DATASET_SEED, num_bytes: int = 1 * BYTES_PER_MIB):
+    """Deterministic pseudo-random byte generator using SHA-256 counter mode."""
+    counter = 0
+    produced = 0
+    while produced < num_bytes:
+        block = hashlib.sha256(seed + counter.to_bytes(8, 'big')).digest()
+        take = min(HASH_BLOCK_SIZE, num_bytes - produced)
+        yield block[:take]
+        produced += take
+        counter += 1
 
 def pad_pkcs7(data: bytes, block_size: int = BLOCK_SIZE_BYTES) -> bytes:
     pad_len = block_size - (len(data) % block_size)
     return data + bytes([pad_len] * pad_len)
-
 
 def unpad_pkcs7(data: bytes, block_size: int = BLOCK_SIZE_BYTES) -> bytes:
     pad_len = data[-1]
@@ -61,24 +82,37 @@ def unpad_pkcs7(data: bytes, block_size: int = BLOCK_SIZE_BYTES) -> bytes:
         raise ValueError("Invalid PKCS#7 padding")
     return data[:-pad_len]
 
-
 def get_base_dir() -> str:
     """Canonical Phase 3 root directory."""
     return os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
 
-
 def load_payload(file_size_bytes: int) -> bytes:
-    """Load canonical test payload from Phase 1 or generate deterministically."""
-    p1_path = os.path.abspath(os.path.join(get_base_dir(), "..", "Phase_1_Data_Lock", "test_data", f"payload_{file_size_bytes}.bin"))
+    """Load canonical test payload from dataset/, Phase_1_Data_Lock, or deterministic counter stream."""
+    base_dir = get_base_dir()
+
+    # 1. Check official dataset directory
+    dataset_filename = SIZE_TO_DATASET_FILE.get(file_size_bytes)
+    if dataset_filename:
+        for candidate_dir in [
+            os.path.join(base_dir, "..", "dataset"),
+            os.path.join(base_dir, "dataset"),
+            "dataset"
+        ]:
+            candidate_path = os.path.join(candidate_dir, dataset_filename)
+            if os.path.exists(candidate_path) and os.path.getsize(candidate_path) == file_size_bytes:
+                with open(candidate_path, "rb") as f:
+                    return f.read()
+
+    # 2. Check Phase 1 test_data
+    p1_path = os.path.abspath(os.path.join(base_dir, "..", "Phase_1_Data_Lock", "test_data", f"payload_{file_size_bytes}.bin"))
     if os.path.exists(p1_path):
         with open(p1_path, "rb") as f:
             data = f.read()
         if len(data) == file_size_bytes:
             return data
 
-    pattern = b"SPIT_CNS_COLLABORATIVE_TOURNAMENT_PAYLOAD_" * 64
-    repeats = (file_size_bytes // len(pattern)) + 1
-    return (pattern * repeats)[:file_size_bytes]
+    # 3. Deterministic SHA-256 counter stream from group fixed seed
+    return b"".join(sha256_counter_stream(DATASET_SEED, file_size_bytes))
 
 
 def run_key_schedule_benchmark(

@@ -1,0 +1,160 @@
+# CNS ISE 1: Official Deterministic Dataset & Pipeline Integration
+
+**Course:** Cryptography and Network Security (CNS) A.Y. 2026–27  
+**Faculty In-Charge:** Prof. Renuka Pawar  
+**Institution:** Sardar Patel Institute of Technology (SPIT), Mumbai  
+**Project:** The Flexible Variable-Key Block Cipher Framework (Blowfish)  
+**Research Investigation:** *Variable Key Length Impacts on Memory Allocation and Throughput in Blowfish Cryptographic Frameworks*  
+**Student Lead:** Rutuja Hirudkar  
+**Document Name:** `cns ise 1`  
+**Date:** November 1, 2026  
+
+---
+
+## 1. Executive Summary of New Additions
+
+This document records the full transition from synthetic placeholder payloads to the official, group-standardized deterministic dataset mandated for the CNS ISE Collaborative Performance Tournament.
+
+### Key Changes at a Glance:
+1. **Official Group Seed Adopted:** `SEED = b"CNS_ISE_GROUP_PROJECT_2026_SEED_42"` (byte-identical across all student project groups).
+2. **New Dedicated Dataset Directory:** Created [`dataset/`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/dataset) containing 1 MiB, 10 MiB, 50 MiB, and 100 MiB binary payload files and the official checksum manifest [`dataset/SHA256SUMS.txt`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/dataset/SHA256SUMS.txt).
+3. **New Dataset Generator Script:** Created [`generate_dataset.py`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/generate_dataset.py) to deterministically generate byte-identical payloads via SHA-256 in counter mode.
+4. **All Synthetic Data Replaced:** Removed legacy placeholder patterns (`b"SPIT_CNS_COLLABORATIVE_TOURNAMENT_PAYLOAD_" * 64` and `b"0" * size`) across all execution engines.
+5. **Standardized Model Scripts Updated:** Synchronized root [`model_script.py`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/model_script.py), [`FINAL_SUBMISSION/model_script.py`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/FINAL_SUBMISSION/model_script.py), and [`Phase_3_Tournament_Benchmark/src/model_script.py`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/Phase_3_Tournament_Benchmark/src/model_script.py) to load directly from `dataset/` and verify integrity against locked SHA-256 digests.
+6. **Phase 1, 2, and 3 Pipeline Alignment:** Updated [`Phase_1_Data_Lock/`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/Phase_1_Data_Lock), [`Phase_2_Local_Tuning/`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/Phase_2_Local_Tuning), and [`Phase_3_Tournament_Benchmark/`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/Phase_3_Tournament_Benchmark) to guarantee 100% end-to-end cryptographic provenance.
+
+---
+
+## 2. Official Dataset Specification & Cryptographic Hashes
+
+All files are deterministically produced using the 32-byte SHA-256 counter mode generator:
+$$\text{Block}_i = \text{SHA-256}\Big(\text{SEED} \mathbin{\Vert} \text{counter}_{64\text{-bit big-endian}}\Big)$$
+
+### Verified Checksum Manifest (`dataset/SHA256SUMS.txt`):
+| Workload File | Size Label | Exact Byte Length | Verified SHA-256 Digest | Status |
+| :--- | :---: | :---: | :--- | :---: |
+| `block_1MiB.bin` | 1 MiB | 1,048,576 B | `bd989350722fc74187cb4ea17b57a094db98983ace258f8de05cd7fc0bcafb08` | **VERIFIED** |
+| `block_10MiB.bin` | 10 MiB | 10,485,760 B | `dce64649824d17136bd741434870eb582b362fcac7ecd7dd9cba8bd4a0ea243e` | **VERIFIED** |
+| `block_50MiB.bin` | 50 MiB | 52,428,800 B | `0c8a6291e69fd25ad37e073871ce5dc1bcccd637328ece63102310a71559f5da` | **VERIFIED** |
+| `block_100MiB.bin` | 100 MiB | 104,857,600 B | `c57be6ffe2979af31db667b2907ce5533966aef1d468772b326ce382356fe8cd` | **VERIFIED** |
+
+*Note: All files are 64-bit (8-byte) block-aligned, matching the native Blowfish block size.*
+
+---
+
+## 3. Inventory of New and Modified Files
+
+### A. New Files Created:
+1. **`generate_dataset.py`**
+   - **Path:** [`cns ise/generate_dataset.py`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/generate_dataset.py)
+   - **Purpose:** Standalone, dependency-free Python script to create `dataset/` and all binary blocks from `SEED`.
+2. **`dataset/` (Directory)**
+   - **Files:** `block_1MiB.bin`, `block_10MiB.bin`, `block_50MiB.bin`, `block_100MiB.bin`, `SHA256SUMS.txt`.
+   - **Location:** [`cns ise/dataset/`](file:///c:/Users/Rutuja%20Hirudkar/OneDrive/c/amazon/cns%20ise/dataset)
+3. **`Phase_1_Data_Lock/test_data/payload_104857600.bin`**
+   - **Purpose:** 100 MiB workload payload aligned with Phase 1 Data Lock standards.
+4. **`cns ise 1.md`** (This file)
+   - Master technical record of all dataset and script updates.
+
+### B. Modified Files:
+1. **`model_script.py`** (Root):
+   - Integrated `load_dataset_payload()`.
+   - Dynamic path resolver: searches `dataset/` relative to working directory, parent paths, or current script.
+   - CLI flags supported: `--key-bits`, `--workload-bytes`, `--file`, `--mode`.
+   - Added `Dataset Source` and `Dataset SHA-256` to returned and printed metrics.
+2. **`FINAL_SUBMISSION/model_script.py`**:
+   - Exact synchronized copy of the root `model_script.py`.
+3. **`Phase_3_Tournament_Benchmark/src/model_script.py`**:
+   - Exact synchronized copy for Phase 3 tournament evaluation.
+4. **`Phase_3_Tournament_Benchmark/src/tournament_benchmark.py`**:
+   - Replaced legacy synthetic generation pattern with `dataset/` lookup and fixed seed counter stream fallback.
+5. **`Phase_2_Local_Tuning/src/benchmark.py`**:
+   - Updated pilot benchmark workload loader to load official dataset blocks or generate from `DATASET_SEED`.
+6. **`Phase_1_Data_Lock/test_data/`**:
+   - Replaced all binary files with byte-identical slices from `sha256_counter_stream` (`payload_1024.bin`, `payload_102400.bin`, `payload_1048576.bin`, `payload_10485760.bin`, `payload_52428800.bin`).
+7. **`Phase_1_Data_Lock/test_file_manifest.csv`**:
+   - Updated baseline SHA-256 hashes to match the new deterministic dataset.
+
+---
+
+## 4. Benchmark Verification on New Dataset
+
+### Sample Output: `python model_script.py` (128-bit key, 1 MiB workload):
+```text
+==================================================
+ --- SPIT CNS TOURNAMENT BENCHMARK RESULTS --- 
+==================================================
+Algorithm Architecture : Blowfish Variable-Key Block Cipher
+Operational Mode       : CBC with Fresh 64-bit Random IV
+--------------------------------------------------
+Cipher Framework                  : Blowfish (16-Round Feistel)
+Operational Mode                  : CBC (NIST SP 800-38A)
+Secret Key Length (bits)          : 128
+Secret Key Length (bytes)         : 16
+Workload Size (Bytes)             : 1048576
+Dataset Source                    : C:\Users\Rutuja Hirudkar\OneDrive\c\amazon\cns ise\dataset\block_1MiB.bin
+Dataset SHA-256                   : bd989350722fc74187cb4ea17b57a094db98983ace258f8de05cd7fc0bcafb08
+Key Schedule / Setup Latency (ms) : 6.8140
+Encryption Latency (ms)           : 10.0974
+Encryption Throughput (MiB/s)     : 99.0354
+Decryption Throughput (MiB/s)     : 186.8146
+Integrity Verification            : 100% SHA-256 Match
+Round-Trip Pass Status            : True
+==================================================
+```
+
+### Sample Output: `python model_script.py --key-bits 256 --workload-bytes 10485760` (256-bit key, 10 MiB workload):
+```text
+==================================================
+ --- SPIT CNS TOURNAMENT BENCHMARK RESULTS --- 
+==================================================
+Algorithm Architecture : Blowfish Variable-Key Block Cipher
+Operational Mode       : CBC with Fresh 64-bit Random IV
+--------------------------------------------------
+Cipher Framework                  : Blowfish (16-Round Feistel)
+Operational Mode                  : CBC (NIST SP 800-38A)
+Secret Key Length (bits)          : 256
+Secret Key Length (bytes)         : 32
+Workload Size (Bytes)             : 10485760
+Dataset Source                    : C:\Users\Rutuja Hirudkar\OneDrive\c\amazon\cns ise\dataset\block_10MiB.bin
+Dataset SHA-256                   : dce64649824d17136bd741434870eb582b362fcac7ecd7dd9cba8bd4a0ea243e
+Key Schedule / Setup Latency (ms) : 17.4333
+Encryption Latency (ms)           : 173.3711
+Encryption Throughput (MiB/s)     : 57.6797
+Decryption Throughput (MiB/s)     : 98.9204
+Integrity Verification            : 100% SHA-256 Match
+Round-Trip Pass Status            : True
+==================================================
+```
+
+---
+
+## 5. Automated Validation & Test Suite Status
+
+- **Unit Test Suite:** `pytest Phase_2_Local_Tuning/tests`  
+  **Result:** **14 / 14 Unit Tests Passed (100% in 4.29s)**
+- **Audit Verification:** `python Phase_3_Tournament_Benchmark/src/validate_results.py`  
+  **Result:** **PASSED (100% Compliant, 0 Errors)**
+- **Cryptographic Correctness:** **100% Round-Trip SHA-256 Match across all tested key sizes and dataset workloads.**
+
+---
+
+## 6. How to Run
+
+1. **To regenerate the dataset from scratch:**
+   ```bash
+   python generate_dataset.py
+   ```
+2. **To run the standardized tournament model script:**
+   ```bash
+   python model_script.py
+   ```
+3. **To run with custom key length or dataset block:**
+   ```bash
+   python model_script.py --key-bits 256 --workload-bytes 10485760
+   python model_script.py --file dataset/block_50MiB.bin
+   ```
+4. **To verify all checksums:**
+   ```powershell
+   Get-FileHash dataset/*.bin
+   ```
